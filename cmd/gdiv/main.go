@@ -9,7 +9,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/google/go-github/v41/github"
+	"github.com/google/go-github/v63/github"
 	"github.com/joerdav/gdiv/cfg"
 	"golang.org/x/oauth2"
 )
@@ -147,7 +147,7 @@ func (cli gitClient) getRepos(org string) ([]string, error) {
 	}
 	// get all pages of results
 	for {
-		repos, resp, err := cli.client.Repositories.ListByOrg(context.Background(), org, opt)
+		repos, resp, err := cli.client.Repositories.ListByOrg(context.WithValue(context.Background(), github.SleepUntilPrimaryRateLimitResetWhenRateLimited, true), org, opt)
 		if err != nil {
 			return names, err
 		}
@@ -171,12 +171,14 @@ type Diff struct {
 	Behind   int    `json:"behind"`
 }
 
+const maxRedirectCount = 3
+
 func (cli gitClient) getDiff(ctx context.Context, org, repo, base, head string) (diff Diff, err error) {
-	m, _, err := cli.client.Repositories.GetBranch(ctx, org, repo, base, true)
+	m, _, err := cli.client.Repositories.GetBranch(ctx, org, repo, base, maxRedirectCount)
 	if err != nil {
 		return
 	}
-	s, _, err := cli.client.Repositories.GetBranch(ctx, org, repo, head, true)
+	s, _, err := cli.client.Repositories.GetBranch(ctx, org, repo, head, maxRedirectCount)
 	if err != nil {
 		return
 	}
